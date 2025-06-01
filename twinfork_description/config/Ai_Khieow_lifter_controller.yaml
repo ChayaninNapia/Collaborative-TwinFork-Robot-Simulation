@@ -1,0 +1,23 @@
+/Ai_Khieow/controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+    # velocity_controller:
+    #   type: velocity_controllers/JointGroupVelocityController
+
+    effort_controller:
+      type: effort_controllers/JointGroupEffortController
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+# velocity_controller:
+#   ros__parameters:
+#     joints:
+#       - lifter
+
+/Ai_Khieow/effort_controller:
+  ros__parameters:
+    joints:
+      - Ai_Khieow/lifter
+

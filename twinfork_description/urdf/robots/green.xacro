@@ -1,0 +1,174 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="$(arg tf_prefix)twinfork_robot">
+
+    <xacro:arg name="tf_prefix" default="" />
+    <xacro:arg name="param_file" default="" />
+    <xacro:arg name="robot_color" default="Gazebo/White"/>
+
+    <xacro:property name="base_color" value="$(arg robot_color)" />
+    <!-- prefix can not start with a slash like a global namespace! results in TF errors -->
+    <xacro:property name="ns" value="$(arg tf_prefix)" />
+    <xacro:property name="prefix" value="${ns}/" />
+    <!-- <xacro:if value="${ns == ''}">
+        <xacro:property name="prefix" value="" />
+    </xacro:if>
+    <xacro:unless value="${ns == ''}">
+        <xacro:property name="prefix" value="${ns}/" />
+    </xacro:unless> -->
+
+    <!-- include configs and macros -->
+    <xacro:include filename="$(find twinfork_description)/urdf/mech/wheels.xacro" />
+    <xacro:include filename="$(find twinfork_description)/urdf/mech/twinfork.transmission.xacro" />
+    <xacro:include filename="$(find twinfork_description)/urdf/common_properties.urdf.xacro" />
+    <xacro:include filename="$(find twinfork_description)/urdf/controllers/diffdrive_gazebo.xacro" />
+    <xacro:include filename="$(find twinfork_description)/urdf/sensors/laserscan.xacro" />
+    <xacro:include filename="$(find twinfork_description)/urdf/sensors/imu.xacro" />
+
+    <!-- base footprint -->
+    <link name="${prefix}base_footprint" />
+    <joint name="${prefix}base_to_link" type="fixed">
+        <parent link="${prefix}base_footprint" />
+        <child link="${prefix}base_link" />
+        <origin xyz="0 0 ${wheel_radius + wheel_zoff}" rpy="0 0 0" />
+    </joint>
+
+    <!-- base link -->
+    <link name="${prefix}base_link">
+        <visual>
+            <geometry>
+                <box size="${base_length} ${base_width} ${base_height}" />
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="${base_length} ${base_width} ${base_height}" />
+            </geometry>
+        </collision>
+        <xacro:box_inertial mass="5.0" x="${base_length}" y="${base_width}" z="${base_height}">
+            <origin xyz="0 0 0" rpy="0 0 0" />
+        </xacro:box_inertial>
+    </link>
+    <gazebo reference="${prefix}base_link">
+        <material>${base_color}</material>
+    </gazebo>
+
+    <!-- wheels and casters -->
+    <xacro:drive_wheel prefix="${prefix}drivewhl_l" x_off="-${wheel_xoff}" y_off="${wheel_ygap}" base_prefix="${prefix}"/>
+    <xacro:drive_wheel prefix="${prefix}drivewhl_r" x_off="${wheel_xoff}" y_off="-${wheel_ygap}" base_prefix="${prefix}"/>
+    <xacro:caster_wheel prefix="${prefix}front_caster" x_off="${caster_xoff}" base_prefix="${prefix}"/>
+    <xacro:caster_wheel prefix="${prefix}back_caster" x_off="-${caster_xoff}" base_prefix="${prefix}"/>
+
+    <!-- *********************** LIDAR SETUP **********************************  -->
+    <!-- Front laser –– ยิงไปข้างหน้า -->
+    <xacro:laser_sensor
+        name="${prefix}front_laser"
+        namespace="${ns}"
+        parent="${prefix}base_link"
+        xyz="0.60 0 0.05"
+        rpy="0 0 ${(pi/4) - 0.2618}"
+        min_angle="-2.356"
+        max_angle="2.356"
+        topic="front_scan" />
+
+    <!-- Back laser –– ยิงกลับหลัง (หมุน 180°) -->
+    <xacro:laser_sensor
+        name="${prefix}back_laser"
+        namespace="${ns}"
+        parent="${prefix}base_link"
+        xyz="-0.60 0 0.0"
+        rpy="0 0 ${pi + pi/4 - 0.2618}"
+        min_angle="-2.356"
+        max_angle="2.356"
+        topic="back_scan" />
+
+    <!-- *********************** IMU SETUP *********************************  -->
+    <joint name="${prefix}imu_joint" type="fixed">
+        <parent link="${prefix}base_link" />
+        <child link="${prefix}imu_link" />
+        <origin xyz="0 0 0.05" rpy="0 0 0" />
+    </joint>
+
+    <link name="${prefix}imu_link" />
+
+    <xacro:imu_gazebo link="${prefix}imu_link" namespace="${ns}" update_rate="50.0" stdev="${imu_stdev}" />
+
+
+    <link name="${prefix}lifter_link">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <box size="${base_length-0.01} ${base_width-0.01} ${base_height-0.01}" />
+            </geometry>
+            <material name="Blue">
+                <color rgba="0.1 0.1 0.9 1.0" />
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <box size="${base_length-0.01} ${base_width-0.01} ${base_height-0.01}" />
+            </geometry>
+        </collision>
+        <xacro:box_inertial mass="5.0" x="${base_length-0.01}" y="${base_width-0.01}"
+            z="${base_height-0.01}">
+            <origin xyz="0 0 0" rpy="0 0 0" />
+        </xacro:box_inertial>
+    </link>
+
+    <joint name="${prefix}lifter" type="prismatic">
+        <parent link="${prefix}base_link" />
+        <child link="${prefix}lifter_link" />
+        <!-- origin ตั้งตำแหน่งเริ่มต้น -->
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <!-- แกน Z บน base_link -->
+        <axis xyz="0 0.9 1" />
+        <limit lower="0.0" upper="0.05" effort="100000" velocity="100.0" />
+    </joint>
+
+    <!-- <transmission name="${prefix}lifter_trans">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="${prefix}lifter">
+            <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="${prefix}lifter_motor">
+            <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+            <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+    </transmission> -->
+
+
+    <ros2_control name="GazeboSystem" type="system">
+        <hardware>
+            <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+        </hardware>
+        <joint name="${prefix}lifter">
+            <command_interface name="effort">
+                <param name="min">-1000</param>
+                <param name="max">1000</param>
+            </command_interface>
+            <state_interface name="position" />
+            <state_interface name="velocity" />
+            <state_interface name="effort" />
+        </joint>
+    </ros2_control>
+
+    <gazebo>
+        <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+            <ros>
+                <namespace>${ns}</namespace>
+            </ros>
+            <parameters>/home/chayanin09/twinfork_ws/src/twinfork_description/config/Ai_Khieow_lifter_controller.yaml</parameters>
+        </plugin>
+    </gazebo>
+
+    <!-- lifter, transmissions, ros2_control unchanged -->
+    <xacro:twinfork_wheel_transmissions />
+
+    <xacro:diff_controller_plugin_gazebo
+        prefix="${prefix}" ns="${ns}"
+        left_wheel_joint="${prefix}drivewhl_l_wheel_joint"
+        right_wheel_joint="${prefix}drivewhl_r_wheel_joint"
+        wheel_separation="${2*wheel_ygap}"
+        wheel_radius="${wheel_radius}"
+    />
+</robot>

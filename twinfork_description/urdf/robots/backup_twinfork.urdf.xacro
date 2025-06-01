@@ -1,0 +1,335 @@
+<?xml version="1.0"?>
+<robot name="basic_mobile_bot" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find twinfork_description)/urdf/mech/twinfork.transmission.xacro" />
+  <xacro:include filename="$(find twinfork_description)/urdf/controllers/diffdrive_gazebo.xacro" />
+  <xacro:include filename="$(find twinfork_description)/urdf/sensors/laserscan.xacro" />
+  <xacro:include filename="$(find twinfork_description)/urdf/sensors/imu.xacro" />
+
+  <!-- ****************** ROBOT CONSTANTS *******************************  -->
+  <!-- Define the size of the robot's main chassis in meters -->
+  <xacro:property name="base_width" value="0.18" />
+  <xacro:property name="base_length" value="1.4" />
+  <xacro:property name="base_height" value="0.06" />
+
+  <!-- Define the shape of the robot's two back wheels in meters -->
+  <xacro:property name="wheel_radius" value="0.049" />
+  <xacro:property name="wheel_width" value="0.05" />
+
+
+  <!-- x-axis points forward, y-axis points to left, z-axis points upwards -->
+  <!-- Define the gap between the wheel and chassis along y-axis in meters -->
+  <xacro:property name="wheel_ygap" value="0.065" />
+
+  <!-- Position the wheels along the z-axis -->
+  <xacro:property name="wheel_zoff" value="0.05" />
+
+  <!-- Position the wheels along the x-axis -->
+  <xacro:property name="wheel_xoff" value="0.0" />
+
+  <!-- Position the caster wheel along the x-axis -->
+  <xacro:property name="caster_xoff" value="0.6" />
+
+  <xacro:property name="caster_radius" value="0.045" />
+
+  <xacro:property name="imu_stdev" value="0.00017" />
+
+  <!-- Define intertial property macros  -->
+  <xacro:macro name="box_inertia" params="m w h d">
+    <inertial>
+      <origin xyz="0 0 0" rpy="${pi/2} 0 ${pi/2}" />
+      <mass value="${m}" />
+      <inertia ixx="${(m/12) * (h*h + d*d)}" ixy="0.0" ixz="0.0" iyy="${(m/12) * (w*w + d*d)}"
+        iyz="0.0" izz="${(m/12) * (w*w + h*h)}" />
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="cylinder_inertia" params="m r h">
+    <inertial>
+      <origin xyz="0 0 0" rpy="${pi/2} 0 0" />
+      <mass value="${m}" />
+      <inertia ixx="${(m/12) * (3*r*r + h*h)}" ixy="0" ixz="0" iyy="${(m/12) * (3*r*r + h*h)}"
+        iyz="0" izz="${(m/2) * (r*r)}" />
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="sphere_inertia" params="m r">
+    <inertial>
+      <mass value="${m}" />
+      <inertia ixx="${(2/5) * m * (r*r)}" ixy="0.0" ixz="0.0" iyy="${(2/5) * m * (r*r)}" iyz="0.0"
+        izz="${(2/5) * m * (r*r)}" />
+    </inertial>
+  </xacro:macro>
+
+  <!-- ****************** ROBOT BASE FOOTPRINT ***************************  -->
+  <!-- Define the center of the main robot chassis projected on the ground -->
+  <link name="base_footprint" />
+
+  <!-- The base footprint of the robot is located underneath the chassis -->
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint" />
+    <child link="base_link" />
+    <origin xyz="0.0 0.0 ${(wheel_radius+wheel_zoff)}" rpy="0 0 0" />
+  </joint>
+
+  <!-- ********************** ROBOT BASE *********************************  -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 -0.05" rpy="0.0 0 0.0" />
+      <geometry>
+        <box size="${base_length} ${base_width} ${base_height}" />
+      </geometry>
+      <material name="Red">
+        <color rgba="${255/255} ${0/255} ${0/255} 1.0" />
+      </material>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 -0.05" rpy="0.0 0 0.0" />
+      <geometry>
+        <box size="${base_length} ${base_width} ${base_height}" />
+      </geometry>
+    </collision>
+
+    <xacro:box_inertia m="5.0" w="${base_width}" d="${base_length}" h="${base_height}" />
+
+  </link>
+
+  <gazebo reference="base_link">
+    <material>Gazebo/Red</material>
+  </gazebo>
+
+  <!-- *********************** DRIVE WHEELS ******************************  -->
+
+  <xacro:macro name="wheel" params="prefix x_reflect y_reflect">
+    <link name="${prefix}_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="1.5707963267949 0 0" />
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}" />
+        </geometry>
+        <material name="White">
+          <color rgba="${255/255} ${255/255} ${255/255} 1.0" />
+        </material>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0" />
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}" />
+        </geometry>
+      </collision>
+
+      <xacro:cylinder_inertia m="10.0" r="${wheel_radius}" h="${wheel_width}" />
+
+    </link>
+
+    <!-- Connect the wheels to the base_link at the appropriate location, and 
+         define a continuous joint to allow the wheels to freely rotate about
+         an axis -->
+    <joint name="${prefix}_joint" type="continuous">
+      <parent link="base_link" />
+      <child link="${prefix}_link" />
+      <origin xyz="${x_reflect*wheel_xoff} ${y_reflect*(wheel_ygap)} ${-wheel_zoff}" rpy="0 0 0" />
+      <limit effort="1000" velocity="100.0" />
+      <axis xyz="0 1 0" />
+    </joint>
+
+    <gazebo reference="${prefix}_link">
+      <mu1>10.0</mu1>
+      <mu2>10.0</mu2>
+      <material>Gazebo/Black</material>
+    </gazebo>
+
+  </xacro:macro>
+
+  <!-- Instantiate two wheels using the macro we just made through the 
+       xacro:wheel tags. We also define the parameters to have one wheel
+       on both sides at the back of our robot (i.e. x_reflect=-1). -->
+  <xacro:wheel prefix="drivewhl_l" x_reflect="-1" y_reflect="1" />
+  <xacro:wheel prefix="drivewhl_r" x_reflect="1" y_reflect="-1" />
+
+  <!-- *********************** CASTER WHEEL ******************************  -->
+  <!-- We add a caster wheel. It will be modeled as sphere.
+       We define the wheel’s geometry, material and the joint to connect it to 
+       base_link at the appropriate location. -->
+  <link name="front_caster">
+    <visual>
+      <geometry>
+        <sphere radius="${caster_radius}" />
+      </geometry>
+      <material name="White">
+        <color rgba="${255/255} ${255/255} ${255/255} 1.0" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="${caster_radius}" />
+      </geometry>
+    </collision>
+    <xacro:sphere_inertia m="0.1" r="${caster_radius}" />
+  </link>
+
+  <gazebo reference="front_caster">
+    <mu1>0.01</mu1>
+    <mu2>0.01</mu2>
+    <material>Gazebo/White</material>
+  </gazebo>
+
+  <joint name="front_caster_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="front_caster" />
+    <origin xyz="${caster_xoff} 0.0 ${-(wheel_radius+wheel_zoff-caster_radius-0.001)}" rpy="0 0 0" />
+  </joint>
+
+  <link name="back_caster">
+    <visual>
+      <geometry>
+        <sphere radius="${caster_radius}" />
+      </geometry>
+      <material name="White">
+        <color rgba="${255/255} ${255/255} ${255/255} 1.0" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="${caster_radius}" />
+      </geometry>
+    </collision>
+    <xacro:sphere_inertia m="0.1" r="${caster_radius}" />
+  </link>
+
+  <gazebo reference="back_caster">
+    <mu1>0.01</mu1>
+    <mu2>0.01</mu2>
+    <material>Gazebo/White</material>
+  </gazebo>
+
+  <joint name="back_caster_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="back_caster" />
+    <origin xyz="${-(caster_xoff)} 0.0 ${-(wheel_radius+wheel_zoff-caster_radius-0.001)}"
+      rpy="0 0 0" />
+  </joint>
+
+  <!-- *********************** IMU SETUP *********************************  -->
+  <!-- Each sensor must be attached to a link.                              -->
+
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="imu_link" />
+    <origin xyz="-0.10 0 0.05" rpy="0 0 0" />
+  </joint>
+
+  <link name="imu_link" />
+
+  <xacro:imu_gazebo link="imu_link" imu_topic="imu_data" update_rate="50.0" stdev="${imu_stdev}" />
+
+  <!-- *********************** GPS SETUP **********************************  -->
+  <joint name="gps_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="gps_link" />
+    <origin xyz="0.10 0 0.05" rpy="0 0 0" />
+  </joint>
+
+  <link name="gps_link" />
+
+  <link name="lifter_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="${base_length-0.01} ${base_width-0.01} ${base_height-0.01}" />
+      </geometry>
+      <material name="Blue">
+        <color rgba="0.1 0.1 0.9 1.0" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="${base_length-0.01} ${base_width-0.01} ${base_height-0.01}" />
+      </geometry>
+    </collision>
+    <xacro:box_inertia m="0.5" w="${base_width-0.01}" d="${base_length-0.01}"
+      h="${base_height-0.01}" />
+  </link>
+
+  <!-- *********************** LIDAR SETUP **********************************  -->
+  <!-- Front laser –– ยิงไปข้างหน้า -->
+  <xacro:laser_sensor
+    name="front_laser"
+    parent="base_link"
+    xyz="0.60 0 -0.05"
+    rpy="0 0 ${(pi/4) - 0.2618}"
+    min_angle="-2.356"
+    max_angle="2.356"
+    topic="front_scan" />
+
+  <!-- Back laser –– ยิงกลับหลัง (หมุน 180°) -->
+  <xacro:laser_sensor
+    name="back_laser"
+    parent="base_link"
+    xyz="-0.60 0 -0.05"
+    rpy="0 0 ${pi + pi/4 - 0.2618}"
+    min_angle="-2.356"
+    max_angle="2.356"
+    topic="back_scan" />
+
+
+  <joint name="lifter" type="prismatic">
+    <parent link="base_link" />
+    <child link="lifter_link" />
+    <!-- origin ตั้งตำแหน่งเริ่มต้น -->
+    <origin xyz="0 0 -0.05" rpy="0 0 0" />
+    <!-- แกน Z บน base_link -->
+    <axis xyz="0 0 1" />
+    <limit lower="0.0" upper="0.050" effort="100000" velocity="100.0" />
+  </joint>
+
+  <xacro:twinfork_wheel_transmissions />
+  <xacro:diff_controller_plugin_gazebo
+    prefix=""
+    ns=""
+    left_wheel_joint="drivewhl_l_joint"
+    right_wheel_joint="drivewhl_r_joint"
+    wheel_separation="${2*wheel_ygap}"
+    wheel_radius="${wheel_radius}"
+  />
+
+  <transmission name="lifter_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="lifter">
+      <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="lifter_motor">
+      <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+
+
+  <ros2_control name="GazeboSystem" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+    <joint name="lifter">
+      <command_interface name="effort">
+        <param name="min">-1000</param>
+        <param name="max">1000</param>
+      </command_interface>
+      <state_interface name="position" />
+      <state_interface name="velocity" />
+      <state_interface name="effort" />
+    </joint>
+  </ros2_control>
+
+  <gazebo>
+    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+      <parameters>$(find twinfork_description)/config/lifter_controller.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+
+</robot>
