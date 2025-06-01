@@ -49,6 +49,8 @@ killall -9 gzserver gzclient
 เปิด termianl ขึ้นมาอีก หน้าแล้วรันคำสั่ง
 
 ```
+cd ~/6509_ws
+source install/setup.bash
 ros2 run twinfork_controller taskspace_server.py 
 ```
 
