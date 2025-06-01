@@ -22,6 +22,7 @@ install(PROGRAMS
   scripts/mission_planner.py
   scripts/virtual_link.py
   scripts/virtual_link_controller.py
+  scripts/mission_planner.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

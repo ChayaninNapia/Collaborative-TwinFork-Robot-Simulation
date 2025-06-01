@@ -108,7 +108,7 @@ def generate_launch_description():
         arguments=['-entity', 'twinfork_green',
                 '-topic', 'robot_description',
                 # กำหนดตำแหน่ง (x, y, z)
-                '-x', '0.35',
+                '-x', '1.0',
                 '-y', '0.0',
                 '-z', '0.1',
                 # กำหนด yaw (rad)
@@ -169,21 +169,28 @@ def generate_launch_description():
     package='twinfork_controller',
     executable='red_controller.py',
     name='red_controller',
-    output='log'  # <-- suppress terminal output
+    output='screen'  # <-- suppress terminal output
     )
 
     green_controller = Node(
         package='twinfork_controller',
         executable='green_controller.py',
         name='green_controller',
-        output='log'  # <-- suppress terminal output
+        output='screen'  # <-- suppress terminal output
     )
     
     virtual_controller = Node(
         package='twinfork_controller',
         executable='virtual_link_controller.py',
         name='virtual_controller',
-        output='log'  # <-- suppress terminal output
+        output='screen'  
+    )
+    
+    mission_planner = Node(
+        package='twinfork_controller',
+        executable='mission_planner.py',
+        name='mission_planner',
+        output='screen' 
     )
     
     static_tf_daeng = Node(
@@ -235,6 +242,8 @@ def generate_launch_description():
     
     ld.add_action(red_controller)
     ld.add_action(green_controller)
+    ld.add_action(virtual_controller)
+    ld.add_action(mission_planner)
 
     return ld
 

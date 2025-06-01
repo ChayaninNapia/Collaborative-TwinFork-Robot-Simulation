@@ -1,0 +1,25 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/chayanin09/6509_ws/install/ira_laser_tools/include/**",
+        "/opt/ros/humble/include/**",
+        "/home/chayanin09/6509_ws/src/Collaborative-TwinFork-Robot-Simulation/twinfork_controller/include/**",
+        "/home/chayanin09/6509_ws/src/Collaborative-TwinFork-Robot-Simulation/twinfork_description/include/**",
+        "/home/chayanin09/6509_ws/src/Collaborative-TwinFork-Robot-Simulation/twinfork_gazebo/include/**",
+        "/home/chayanin09/6509_ws/src/Collaborative-TwinFork-Robot-Simulation/twinfork_navigation/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}
