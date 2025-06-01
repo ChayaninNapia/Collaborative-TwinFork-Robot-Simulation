@@ -24,10 +24,19 @@ cd ~/6509_ws
 colcon build
 source install/setup.bash
 ```
-
-## Launch the Simulation
+## Run the GUI
 
 ```
+cd ~/6509_ws
+source install/setup.bash
+ros2 run twinfork_controller taskspace_server.py 
+```
+
+## Launch the Simulation
+เปิด termianl ขึ้นมาอีก หน้าแล้วรันคำสั่ง
+```
+cd ~/6509_ws
+source install/setup.bash
 ros2 launch twinfork_gazebo multi_sim.launch.py 
 ```
 
@@ -44,15 +53,6 @@ killall -9 gzserver gzclient
 
 ![bruh](image/rviz.png)
 
-## run the GUI
-
-เปิด termianl ขึ้นมาอีก หน้าแล้วรันคำสั่ง
-
-```
-cd ~/6509_ws
-source install/setup.bash
-ros2 run twinfork_controller taskspace_server.py 
-```
 
 ## Let's Test
 
